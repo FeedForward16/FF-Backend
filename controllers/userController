@@ -1,0 +1,101 @@
+const { supabase } = require("../utils/db");
+//to create a user
+const userDataStorage = async (req, res) => {
+    const { email, password, full_name } = req.body;
+    if (!email || !password || !full_name) {
+      return res.status(400).json({
+        error: "Bad request",
+        message: "Email, password, and full name are required"
+      });
+    }
+    try {
+      const { data : authData, error : authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { 
+            full_name,
+          }
+        }
+      });
+  if (authError) throw authError;
+      const { data, error } = await supabase
+        .from('users')
+        .insert([{
+          id: authData.user.id,
+          full_name,
+          email,
+          created_at: new Date().toISOString()
+        }])
+        .select();
+  if (error) throw error;
+      return res.status(201).json({
+        user: data[0],
+        auth: authData
+      });
+  
+    } catch (error) {
+      console.error("User creation error:", error);
+      return res.status(500).json({
+        error: "User creation failed",
+        message: error.message
+      });
+    }
+  };
+  //update user
+const changeUserData=async(req,res)=>{
+  const { email,password,new_full_name,new_email }=req.body;
+  if(!email||!password){
+    res.status(400).json({
+      error : "bad request",
+      message : "email and password are required to update user fields"
+    });
+  }
+  try{
+    const {error:authErr}= await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    if(authErr){
+      throw authErr;
+    }
+  const {error:authError}=await supabase.auth.updateUser(
+{
+  email:new_email || email,
+  data: { full_name: new_full_name }
+  }
+  );
+  if(authError){
+    throw authError;
+  }
+  const {error:dbError}=await supabase
+  .from('users')
+  .update({
+    full_name:new_full_name,
+    email:new_email||email
+  })
+  .eq('email',email);
+  if(dbError){
+    throw dbError;
+  }
+  res.status(200).send("user data updated");
+}
+catch(err){
+  res.status(500).json({
+    error:"server error",
+    message:err.message
+  });
+}};
+const deleteuserData=async(req,res)=>{
+}
+const userDataRetrieval=async(req,res)=>{
+}
+const getAllUsers=async(req,res)=>{
+}
+const deleteAllUsers=async(req,res)=>{
+}
+module.exports={userDataStorage,changeUserData,
+    deleteuserData,
+    userDataRetrieval,
+    getAllUsers,
+    deleteAllUsers};
